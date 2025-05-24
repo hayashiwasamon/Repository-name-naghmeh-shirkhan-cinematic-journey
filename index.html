@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ナグメ・シルハン監督：インタラクティブ・アニメーションレポート</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            color: #333; /* 基本の文字色を少し濃く */
+            overflow-x: hidden; /* 横スクロールバーを防止 */
+        }
+
+        #vanta-bg { /* ID名をvanta-bgに変更 */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .main-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            min-height: 100vh;
+            overflow-y: auto; /* メインコンテンツのスクロールを許可 */
+        }
+
+        /* --- Header Styles from original report --- */
+        .active-nav {
+            border-bottom: 2px solid #0284c7; /* sky-600 */
+            color: #0284c7; /* sky-600 */
+            font-weight: 600;
+        }
+        .inactive-nav {
+            border-bottom: 2px solid transparent;
+        }
+        /* --- End Header Styles --- */
+
+        .content-wrapper {
+            max-width: 1200px; /* コンテンツ全体の最大幅を調整 */
+            margin: 0 auto;
+            padding: 2rem 1rem; /* 上下左右のパディング */
+        }
+        
+        .content-section {
+            display: none;
+            background-color: rgba(255, 255, 255, 0.7); /* 半透明度を上げる (0.85 -> 0.7) */
+            backdrop-filter: blur(8px); /* 背景をぼかす効果を少し強く */
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        .content-section.active {
+            display: block;
+        }
+
+        /* 3-column layout for sections */
+        .three-column-grid {
+            display: grid;
+            grid-template-columns: repeat(1, 1fr); /* Mobile: 1 column */
+            gap: 1.5rem;
+        }
+        @media (min-width: 768px) { /* Tablet: 2 columns */
+            .three-column-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (min-width: 1024px) { /* Desktop: 3 columns */
+            .three-column-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        .three-column-grid > div,
+        .three-column-grid > p.quote { /* p.quoteも直接グリッドアイテムにできるように */
+            background-color: rgba(255, 255, 255, 0.75); /* 半透明度を上げる (0.9 -> 0.75) */
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            min-width: 0; /* Prevent overflow in grid items */
+        }
+
+
+        .quote {
+            border-left: 4px solid #f97316; /* orange-500 */
+            padding-left: 1rem;
+            margin: 1rem 0;
+            font-style: italic;
+            color: #4b5563; /* gray-600 */
+            background-color: rgba(253, 246, 227, 0.8); /* #fdf6e3 のアルファ版 (0.8) */
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+            border-radius: 0.25rem;
+        }
+        .film-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background-color: rgba(255, 255, 255, 0.8); /* Ensure film cards have semi-transparent background (0.8) */
+        }
+        .film-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .timeline-item {
+            position: relative;
+            padding-bottom: 2rem;
+            padding-left: 2.5rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0.625rem;
+            top: 0.25rem;
+            width: 0.75rem;
+            height: 0.75rem;
+            border-radius: 50%;
+            background-color: #0284c7;
+            z-index: 10;
+        }
+        .timeline-item::after {
+            content: '';
+            position: absolute;
+            left: 1rem;
+            top: 0.25rem;
+            bottom: -0.5rem;
+            width: 2px;
+            background-color: #e5e7eb;
+        }
+        .timeline-item:last-child::after {
+            display: none;
+        }
+        .tab-button.active {
+            background-color: #0ea5e9; /* sky-500 */
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* YouTube Embed Styles */
+        .video-container {
+            margin-top: 1.5rem;
+        }
+        .video-container h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #2c5282; /* Tailwind text-blue-800 like */
+        }
+        .youtube-embed-container {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .youtube-embed-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+
+        /* Controls Panel */
+        #controls-toggle-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #0284c7; /* sky-600 */
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            z-index: 1001; /* Ensure it's above controls panel when closed */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #controls-container {
+            position: fixed;
+            top: 80px; /* Below toggle button */
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.9); /* 半透明度を調整 (0.95 -> 0.9) */
+            backdrop-filter: blur(8px); /* blurを少し強く */
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            width: 300px; /* Slightly narrower for better fit */
+            max-height: calc(100vh - 100px); /* Adjust for toggle button and padding */
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            transform: translateX(110%); /* Initially off-screen */
+            opacity: 0;
+        }
+        #controls-container.open {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+        .control-group input[type="range"],
+        .control-group input[type="color"],
+        .control-group select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+        .control-group input[type="color"] {
+            height: 40px;
+        }
+        .control-group .value-display {
+            font-size: 0.9em;
+            color: #555;
+            text-align: right;
+        }
+        #controls-container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            color: #111;
+        }
+        #controls-container::-webkit-scrollbar { width: 6px; }
+        #controls-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        #controls-container::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        #controls-container::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* Responsive adjustments for controls */
+        @media (max-width: 768px) {
+            #controls-container {
+                width: calc(100% - 40px); /* Full width minus padding */
+                max-height: 60vh; /* Limit height on mobile */
+                top: auto;
+                bottom: 20px; /* Position at bottom */
+                left: 20px;
+                right: 20px;
+                transform: translateY(110%); /* Initially off-screen downwards */
+            }
+            #controls-container.open {
+                transform: translateY(0);
+            }
+            #controls-toggle-button {
+                top: auto;
+                bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-stone-100 text-neutral-800">
+    <canvas id="vanta-bg"></canvas> <div class="main-container">
+        <header class="bg-white/70 backdrop-blur-md shadow-md sticky top-0 z-50">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex items-center">
+                        <h1 class="text-2xl font-bold text-sky-700">ナグメ・シルハン</h1>
+                    </div>
+                    <nav class="hidden md:flex space-x-4">
+                        <a href="#home" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-600 hover:text-sky-600 inactive-nav">ホーム</a>
+                        <a href="#bio" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-600 hover:text-sky-600 inactive-nav">プロフィール</a>
+                        <a href="#filmography" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-600 hover:text-sky-600 inactive-nav">フィルモグラフィー</a>
+                        <a href="#themes" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-600 hover:text-sky-600 inactive-nav">テーマと影響</a>
+                        <a href="#director-voice" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-600 hover:text-sky-600 inactive-nav">監督の言葉</a>
+                        <a href="#impact" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-600 hover:text-sky-600 inactive-nav">貢献と意義</a>
+                    </nav>
+                    <div class="md:hidden">
+                        <button id="mobile-menu-button" class="text-neutral-600 hover:text-sky-600 focus:outline-none">
+                            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="mobile-menu" class="md:hidden hidden bg-white/80 backdrop-blur-md shadow-lg">
+                <a href="#home" class="nav-link block px-4 py-2 text-sm text-neutral-600 hover:bg-sky-50 hover:text-sky-600">ホーム</a>
+                <a href="#bio" class="nav-link block px-4 py-2 text-sm text-neutral-600 hover:bg-sky-50 hover:text-sky-600">プロフィール</a>
+                <a href="#filmography" class="nav-link block px-4 py-2 text-sm text-neutral-600 hover:bg-sky-50 hover:text-sky-600">フィルモグラフィー</a>
+                <a href="#themes" class="nav-link block px-4 py-2 text-sm text-neutral-600 hover:bg-sky-50 hover:text-sky-600">テーマと影響</a>
+                <a href="#director-voice" class="nav-link block px-4 py-2 text-sm text-neutral-600 hover:bg-sky-50 hover:text-sky-600">監督の言葉</a>
+                <a href="#impact" class="nav-link block px-4 py-2 text-sm text-neutral-600 hover:bg-sky-50 hover:text-sky-600">貢献と意義</a>
+            </div>
+        </header>
+
+        <main class="content-wrapper">
+            <section id="home" class="content-section active">
+                <div class="text-center mb-12">
+                    <img src="https://placehold.co/150x150/e2e8f0/64748b?text=N.S." alt="ナグメ・シルハン監督" class="mx-auto rounded-full mb-4 shadow-lg">
+                    <h2 class="text-4xl font-bold text-neutral-700 mb-2">ナグメ・シルハン</h2>
+                    <p class="text-xl text-sky-600 font-semibold">イラン系アメリカ人 映画監督・脚本家・編集者</p>
+                </div>
+                <div class="three-column-grid">
+                    <p class="quote">
+                        ナグメ・シルハン監督の深遠なる映画芸術の世界へ、皆様を心より歓迎いたします。このインタラクティブ・レポートは、単なる情報の羅列ではなく、彼女の個人的な旅路、画期的な映画作品群、そして彼女が抱く芸術的ビジョン、さらには現代インディペンデント映画界における彼女の顕著な貢献について、多角的に深く掘り下げることを目的としています。シルハン監督は、故郷を失うという普遍的な痛み、文化的多様性の中でのアイデンティティの模索、そして特に女性の視点から見た移民としての複雑な経験といった、現代社会が直面する重要なテーマを、卓越した繊細さと力強さをもって描き出すことで、国境を越えて高い評価を確立しています。
+                    </p>
+                    <p class="quote">
+                        このデジタル・アプリケーションを通じて、シルハン監督の映画作品群が内包する、時代や文化を超えて響き渡る普遍的なメッセージ、そして異なる文化的背景を持つ人々の間にも共感の架け橋を築き上げる物語の持つ根源的な力を、皆様ご自身で感じ取っていただけることを願っております。各セクションを巡りながら、シルハン監督の魅力に満ちたキャリアの軌跡と、彼女の作品群が織りなす豊かで複雑な映画的宇宙を、どうぞごゆっくりとお楽しみください。
+                    </p>
+                    <div class="grid grid-cols-1 gap-6">
+                        <a href="#filmography" data-target="filmography" class="nav-trigger-card block p-6 bg-white/80 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
+                            <h3 class="text-xl font-semibold text-sky-700 mb-2">🎬 フィルモグラフィー</h3>
+                            <p class="text-neutral-600 text-sm">『The Neighbor (Hamsayeh)』や『MAKI マキ』といった、彼女の代表的な長編映画作品に関する詳細な情報（あらすじ、キャスト、製作背景、批評的評価など）をご覧いただけます。</p>
+                        </a>
+                        <a href="#themes" data-target="themes" class="nav-trigger-card block p-6 bg-white/80 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
+                            <h3 class="text-xl font-semibold text-sky-700 mb-2">🌍 テーマと影響</h3>
+                            <p class="text-neutral-600 text-sm">移民としての経験、文化的アイデンティティの探求、ジェンダーと女性の視点といった、彼女の作品に通底する主要なテーマや、影響を受けた映画監督、芸術運動について深く探ります。</p>
+                        </a>
+                        <a href="#bio" data-target="bio" class="nav-trigger-card block p-6 bg-white/80 rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300">
+                            <h3 class="text-xl font-semibold text-sky-700 mb-2">👤 プロフィール</h3>
+                            <p class="text-neutral-600 text-sm">ナグメ・シルハン監督の個人的な経歴、イランからアメリカへの移住、そして映画製作という表現手段に至るまでの感動的な道のりを紹介します。</p>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="bio" class="content-section">
+                <h2 class="text-3xl font-bold text-neutral-700 mb-8 border-b-2 border-sky-500 pb-2">プロフィール：文化の狭間で映画を見出す</h2>
+                <div class="three-column-grid">
+                    <p class="quote">
+                        ナグメ・シルハン監督の映画製作への情熱的な道のりは、彼女自身の個人的な経験、特に文化的な境界線を越えるという体験と、分かちがたく結びついています。イランの地で生を受け、政治的変動の予兆の中で若くしてアメリカ合衆国へと移住したという原体験は、彼女の作品群において繰り返し探求される中心的なテーマ群、すなわち「故郷喪失」という深い喪失感、「文化的アイデンティティ」の複雑な探求、そして新たな環境における「再出発の苦闘」といった普遍的なモチーフの豊穣な源泉となったのです。このセクションでは、彼女の人間的および芸術的成長における形成期から、インディペンデント映画監督としての確固たるキャリアを築き上げるまでの感動的で示唆に富む道のりを、詳細に辿ります。
+                    </p>
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-semibold text-sky-700 mb-3">生い立ちと移住</h3>
+                        <div class="timeline-item">
+                            <h4 class="font-semibold text-lg text-neutral-700">1972年</h4>
+                            <p class="quote">ナグメ・シルハンは、歴史と文化が深く息づく国、イランにて生を受けました。この時期のイランは、社会変革の胎動を内包しつつも、豊かな伝統文化が人々の生活に根差していた時代でした。</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4 class="font-semibold text-lg text-neutral-700">1978年 (イスラム革命の1年前)</h4>
+                            <p class="quote">イラン国内の政治的緊張が高まり、イスラム革命へと繋がる大きな変革の直前、シルハン一家は将来を見据え、アメリカ合衆国への移住という重大な決断を下しました。この出来事は、幼いシルハンにとって、故郷との最初の離別であり、その後の人生観に大きな影響を与えることになります。</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4 class="font-semibold text-lg text-neutral-700">1980年代</h4>
+                            <p class="quote">一家がアメリカに新天地を求めた後、彼女の父親はテヘランへ戻ることを選択しましたが、その直後に勃発したイラン・イラク戦争という悲劇的な出来事により、シルハンの母親は無期限にアメリカに留まることを余儀なくされました。この予期せぬ家族の離散、故郷を失ったという深い喪失感、そして異文化の中で新たな生活を築き上げようとする「分離、故郷喪失、そして再出発の苦闘」という一連の経験は、彼女の心に深く刻まれ、後の映画作品における重要なテーマとして繰り返し描かれることになります。</p>
+                        </div>
+                        <p class="quote">これらの幼少期における個人的かつ歴史的な経験の積み重ねは、単なる伝記的事実を超えて、ナグメ・シルハン監督の芸術的感性と創造性の基盤を形成しました。彼女の映画作品群において、移民であることの複雑さ、政治的混乱がもたらす家族の離散、そして異文化の中でアイデンティティを模索するという核となるテーマ群は、この原体験と深く、そして有機的に結びついているのです。</p>
+                    </div>
+
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-semibold text-sky-700 mb-3">学歴と初期のキャリア</h3>
+                        <div class="timeline-item">
+                            <h4 class="font-semibold text-lg text-neutral-700">高校時代～20代前半</h4>
+                            <p class="quote">シルハンは、アメリカ東部の文化都市ボストンで多感な青春時代を過ごしました。この時期に映画という表現媒体への強い関心を持ち始め、その情熱は地元のビデオ店で働くという形で具体的な行動へと繋がりました。数多の映画に触れる中で、彼女の映画的教養と独自の視点が育まれていったのです。</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4 class="font-semibold text-lg text-neutral-700">1994年</h4>
+                            <p class="quote">ボストン大学の名高いコミュニケーション学部において放送・映画学を専攻し、優秀な成績で理学士号を取得して卒業しました。この専門的な学びは、彼女が映画製作の理論と技術を体系的に習得する上で重要な土台となりました。</p>
+                        </div>
+                        <div class="timeline-item">
+                            <h4 class="font-semibold text-lg text-neutral-700">1990年代後半</h4>
+                            <p class="quote">卒業後、インディペンデント映画製作という夢を実現するため、芸術と文化の多様性が渦巻く大都市ニューヨークへと移り住みました。当初は業界でのコネクションに乏しかったものの、広告業界やプロダクション・ハウスでの編集業務に精力的に携わりました。さらに、インディペンデント系のドキュメンタリー映画や長編映画の編集を手がける傍ら、未来の映画人を育成すべく高校生に映画製作を指導するなど、多方面でその才能を発揮し始めました。</p>
+                        </div>
+                        <p class="quote">映画業界における初期のコネクションが必ずしも豊富ではなかったにもかかわらず、ナグメ・シルハンはインディペンデント映画監督になるという明確なビジョンを揺るぎなく持ち続けました。編集者およびプロダクション業務を通じて培われた実践的なスキルと、困難な状況にも屈しない精神的な回復力は、彼女が自身の長編映画作品を監督し、芸術的野心を実現するための不可欠な力となったのです。</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="filmography" class="content-section">
+                <h2 class="text-3xl font-bold text-neutral-700 mb-8 border-b-2 border-sky-500 pb-2">フィルモグラフィー</h2>
+                 <p class="quote mb-8">
+                    ナグメ・シルハン監督は、そのキャリアを通じて、これまでに2本の特筆すべき長編映画を監督・脚本・編集し、これらの作品群は国際的な映画祭や批評家から高い評価を得ています。彼女の映画は、自身の個人的な経験や深い芸術的関心を色濃く反映しており、特に移民であることの複雑さや文化的多様性の中でのアイデンティティの探求といった、現代社会における重要なテーマを繊細かつ力強い筆致で掘り下げています。各作品の詳細情報を通じて、シルハン監督の独自の映画的探求の軌跡と、彼女が紡ぎ出す物語の深遠なる世界をご堪能ください。
+                </p>
+                <div class="space-y-12"> <div class="film-card p-6 rounded-lg shadow-lg">
+                        <div class="flex flex-col md:flex-row gap-6">
+                            <img src="https://placehold.co/300x450/e0f2fe/075985?text=The+Neighbor" alt="[The Neighbor ポスター]" class="w-full md:w-1/3 h-auto object-cover rounded-md">
+                            <div class="md:w-2/3">
+                                <h3 class="text-2xl font-bold text-sky-700 mb-2">The Neighbor (Hamsayeh)</h3>
+                                <p class="text-sm text-neutral-500 mb-3">2010年 | 米国/カナダ合作 | 108分</p>
+                                <div class="mb-4">
+                                    <span class="inline-block bg-sky-100/80 text-sky-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">監督</span>
+                                    <span class="inline-block bg-sky-100/80 text-sky-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">脚本</span>
+                                    <span class="inline-block bg-sky-100/80 text-sky-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">共同製作</span>
+                                    <span class="inline-block bg-sky-100/80 text-sky-700 text-xs font-semibold px-2.5 py-0.5 rounded">編集</span>
+                                </div>
+                                <div class="film-tabs mb-4 border-b border-neutral-200">
+                                    <button class="tab-button active px-4 py-2 -mb-px border border-transparent hover:border-neutral-300 rounded-t-md text-sm font-medium" data-tab="neighbor-overview">概要</button>
+                                    <button class="tab-button px-4 py-2 -mb-px border border-transparent hover:border-neutral-300 rounded-t-md text-sm font-medium" data-tab="neighbor-vision">監督のビジョン</button>
+                                    <button class="tab-button px-4 py-2 -mb-px border border-transparent hover:border-neutral-300 rounded-t-md text-sm font-medium" data-tab="neighbor-awards">評価・受賞</button>
+                                    <button class="tab-button px-4 py-2 -mb-px border border-transparent hover:border-neutral-300 rounded-t-md text-sm font-medium" data-tab="neighbor-video">関連動画</button>
+                                </div>
+                                <div id="neighbor-overview" class="tab-content active">
+                                    <p class="quote">カナダの多文化都市バンクーバーを舞台に、数世代にわたるイラン系女性たちの複雑な人生模様、愛情の絆、避けられない喪失の経験、そして異文化の中での文化的アイデンティティの模索を、繊細かつ深く描き出した物語です。特に、イランという故国を離れて暮らす、精神的に自立し「解放された」イラン人女性たちが直面する愛の形、家族やコミュニティへの忠誠心、内なる罪悪感、そして社会からの疎外感といった普遍的な感情を、鋭い洞察力をもって描写しています。</p>
+                                    <p class="quote"><strong>主要キャスト:</strong> 物語の中心となるのは、アジタ・サヘブジャム (Azita Sahebjam)、タラ・ナゼミ (Tara Nazemi)、パリサ・ワヘディ (Parisa Wahedi) といった実力派俳優たちが演じる、それぞれに異なる葛藤と希望を抱えるイラン人女性たちです。</p>
+                                </div>
+                                <div id="neighbor-vision" class="tab-content">
+                                    <p class="quote">「『The Neighbor』という作品を通じて私が描きたかったのは、物理的には離れて暮らしながらも、目に見えない文化的な糸、記憶、そして共通の経験によって、どうにかして結びついているイラン人女性たちの姿でした。また、従来のステレオタイプな描写から脱却し、イラン人女性の多様な側面を独自の視点から描き出す、真に自立したペルシャ語映画を創造したいという強い思いがありました。」</p>
+                                    <p class="quote">この作品は、移住という大きな人生の転換と、それに伴う文化的な疎外感によって、時として断絶されそうになる母娘関係の機微、そして故郷という概念、心の安全、深い孤独といった、人間の根源的なテーマを深く探求しています。特に、映画の中で重要なモチーフとして用いられるダンスは、登場人物たちの内面世界や、彼女たちが抱える文化的葛藤、そして言葉では表現しきれない感情を象徴的に、そして美しく表現する手段となっています。</p>
+                                </div>
+                                <div id="neighbor-awards" class="tab-content">
+                                    <ul class="list-disc list-inside text-neutral-600 space-y-1">
+                                       <li class="quote">イタリアで開催されたミラノ国際映画祭において、その年の最優秀作品賞という栄誉ある賞を受賞しました。</li>
+                                       <li class="quote">カナダのトロント・リールワールド映画祭でも、同様に最優秀作品賞に輝き、国際的な評価を確固たるものにしました。</li>
+                                       <li class="quote">アメリカのロサンゼルス国際映画祭では、主演のアジタ・サヘブジャムが最優秀女優賞を受賞し、その卓越した演技が高く評価されました。</li>
+                                       <li class="quote">カナダのモントリオール世界映画祭では、新人監督賞にあたるゴールデン・ゼニス賞にノミネートされ、シルハン監督の才能が注目を集めました。</li>
+                                       <li class="quote">著名な映画評論家である故ロジャー・イーバート氏からは、「洞察に満ちた人物描写が素晴らしく、強く推奨する」という高評価を得ました。</li>
+                                    </ul>
+                                    <p class="quote">これらの受賞歴に加え、ニューヨーク近代美術館（MoMA）での名誉あるプレミア上映を皮切りに、ヴェネツィア・ビエンナーレ、バンクーバー国際映画祭、シカゴ国際映画祭など、世界各国の多数の権威ある国際映画祭で公式上映され、広範な観客と批評家から称賛を浴びました。</p>
+                                </div>
+                                <div id="neighbor-video" class="tab-content video-container">
+                                    <h4>The Neighbor - Naghmeh Shirkhan</h4>
+                                    <div class="youtube-embed-container">
+                                        <iframe width="560" height="315" src="https://www.youtube.com/embed/VIDEO_ID_NEIGHBOR" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                                    </div>
+                                    <p class="text-xs text-neutral-500 mt-1">注: 上記の `VIDEO_ID_NEIGHBOR` を実際のYouTube動画ID (例: `dQw4w9WgXcQ`) に置き換えてください。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="film-card p-6 rounded-lg shadow-lg">
+                        <div class="flex flex-col md:flex-row gap-6">
+                            <img src="https://placehold.co/300x450/ede9fe/5b21b6?text=MAKI" alt="[MAKI マキ ポスター]" class="w-full md:w-1/3 h-auto object-cover rounded-md">
+                            <div class="md:w-2/3">
+                                <h3 class="text-2xl font-bold text-sky-700 mb-2">MAKI マキ (Maki)</h3>
+                                <p class="text-sm text-neutral-500 mb-3">2017年 (製作) / 2018年 (日本公開) | 日本/米国合作 | 90分</p>
+                                <div class="mb-4">
+                                    <span class="inline-block bg-sky-100/80 text-sky-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">監督</span>
+                                    <span class="inline-block bg-sky-100/80 text-sky-700 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">脚本</span>
+                                    <span class="inline-block bg-sky-100/80 text-sky-700 text-xs font-semibold px-2.5 py-0.5 rounded">編集</span>
+                                </div>
+                                <div class="film-tabs mb-4 border-b border-neutral-200">
+                                    <button class="tab-button active px-4 py-2 -mb-px border border-transparent hover:border-neutral-300 rounded-t-md text-sm font-medium" data-tab="maki-overview">概要</button>
+                                    <button class="tab-button px-4 py-2 -mb-px border border-transparent hover:border-neutral-300 rounded-t-md text-sm font-medium" data-tab="maki-vision">監督のビジョン</button>
+                                    <button class="tab-button px-4 py-2 -mb-px border border-transparent hover:border-neutral-300 rounded-t-md text-sm font-medium" data-tab="maki-awards">評価・受賞</button>
+                                    <button class="tab-button px-4 py-2 -mb-px border border-transparent hover:border-neutral-300 rounded-t-md text-sm font-medium" data-tab="maki-video">関連動画</button>
+                                </div>
+                                <div id="maki-overview" class="tab-content active">
+                                    <p class="quote">国際都市ニューヨークに存在する日本人ディアスポラの知られざる裏社会、あるいは華やかさと影が交錯する日本人高級クラブという特殊な環境を舞台に、夢と現実の間で揺れ動く若い日本人女性マキの成長と葛藤を描いた、現代的なラブストーリーです。彼女の秘密の恋愛、予期せぬ妊娠、そして彼女を取り巻く人々の複雑な思惑が絡み合い、物語はスリリングかつエモーショナルに展開していきます。</p>
+                                    <p class="quote"><strong>主要キャスト:</strong> 物語の鍵を握るカリスマ的なママサン・ミカ役を日本を代表する女優・原田美枝子が熱演。主人公マキをナオミ・サンドバーグ (Naomi Sundberg) が、その恋人トミーをジュリアン・スィーヒ (Julian Cihi) が演じ、国際的なキャストが作品に深みを与えています。</p>
+                                </div>
+                                <div id="maki-vision" class="tab-content">
+                                    <p class="quote">「この作品では、愛と喪失、権力と人間関係における操作といった普遍的なテーマを、これまでにない新たな視点から探求したいと考えました。その中で、ニューヨークに存在する日本人ディアスポラのコミュニティに、物語の豊かなインスピレーションを見出したのです。登場人物たちは、それぞれが変化を求めて日本を離れましたが、人間が本質的に持つ、より深い所属への渇望が、結果としてニューヨークという異郷の地で形成された日本人サブカルチャーの中で、彼らを再び強く結びつけることになったのです。」</p>
+                                    <p class="quote">シルハン監督は、長年にわたり日本文化に対して強い関心と敬愛の念を抱いており、この映画の製作は、その文化をより深く掘り下げ、理解する貴重な機会となりました。作品の根底には、文化的故郷喪失という現代的なテーマ、裏切られた無邪気さの痛み、女性のエンパワーメントへの願い、そして移民として生きることの困難さとその中での希望といった、多層的なテーマが織り込まれています。</p>
+                                </div>
+                                <div id="maki-awards" class="tab-content">
+                                    <ul class="list-disc list-inside text-neutral-600 space-y-1">
+                                        <li class="quote">アメリカで開催されたチェルシー映画祭において、ナグメ・シルハン監督がその卓越した演出力を評価され、最優秀監督賞を受賞しました。</li>
+                                        <li class="quote">特筆すべきことに、2017年の同映画祭において、長編劇映画部門で作品を上映した唯一の女性監督であり、インディペンデント映画界における女性監督の活躍を象徴する出来事となりました。</li>
+                                    </ul>
+                                    <p class="quote">日本では2018年11月17日にミニシアター系の配給会社ユーロスペースによって劇場公開され、多くの映画ファンに届けられました。一部の批評においては、東アジア系女性のステレオタイプな描写に関する指摘も見られましたが、移民が直面する困難さや、異文化の中で生きる人々の姿を浮き彫りにした点は、多くの観客や批評家から肯定的に評価されました。</p>
+                                </div>
+                                <div id="maki-video" class="tab-content video-container">
+                                    <h4>NYの日本人社会を描いた映画『MAKI マキ』ナグメ・シルハン監督インタビュー</h4>
+                                    <div class="youtube-embed-container">
+                                        <iframe width="560" height="315" src="https://www.youtube.com/embed/VIDEO_ID_MAKI" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+                                    </div>
+                                     <p class="text-xs text-neutral-500 mt-1">注: 上記の `VIDEO_ID_MAKI` を実際のYouTube動画ID (例: `AbCdEfGhIjK`) に置き換えてください。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="themes" class="content-section">
+                <h2 class="text-3xl font-bold text-neutral-700 mb-8 border-b-2 border-sky-500 pb-2">主題的特徴と影響</h2>
+                <div class="three-column-grid">
+                    <p class="quote">
+                        ナグメ・シルハン監督の映画作品群は、その表層的な物語展開の奥深くで、一貫して人間性の複雑で深遠な部分に鋭い焦点を当てています。彼女自身の個人的な経験、特に文化的な境界線を越えて生きてきたという体験から丹念に紡ぎ出されるテーマ群は、国境や文化の違いを超えて多くの観客の心の琴線に触れ、深い共感を呼び起こし、その結果として作品に普遍的な価値を与えています。このセクションでは、彼女の映画作品に繰り返し現れ、物語の核心を形成する主要なテーマ群と、彼女の独自の芸術的感性および創造的活動に影響を与えた敬愛する映画監督たちや重要な芸術運動について、詳細に探求していきます。
+                    </p>
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-semibold text-sky-700 mb-4">繰り返し現れるテーマ</h3>
+                        <ul class="space-y-3">
+                            <li>
+                                <h4 class="font-semibold text-lg text-neutral-700">🌍 移民の経験</h4>
+                                <p class="quote">シルハン監督の作品における最も顕著なテーマの一つは、移民としての経験です。これには、故郷との物理的・精神的な「分離」、それによって生じる深い「故郷喪失」の感覚、新たな土地での「再出発の苦闘」、異文化環境における「文化的疎外」感、そして真の「所属」とは何かという根源的な探求が含まれます。これらの要素は、登場人物たちの行動や心理描写を通じて、繊細かつ力強く描かれます。</p>
+                            </li>
+                            <li>
+                                <h4 class="font-semibold text-lg text-neutral-700">🚺 女性の視点とエンパワーメント</h4>
+                                <p class="quote">彼女の映画は、一貫して女性の物語と彼女たちの内面生活に光を当てています。社会的な制約や個人的な困難に直面しながらも、自己の尊厳を保ち、困難な状況下で「回復力」を発揮する女性たちの姿が描かれます。これは単なる被害者としての描写ではなく、自己実現や「エンパワーメント」への希求として表現されることが多いです。</p>
+                            </li>
+                            <li>
+                                <h4 class="font-semibold text-lg text-neutral-700">🎭 文化的二重性とアイデンティティ交渉</h4>
+                                <p class="quote">「二つの世界の狭間で漂流している」という感覚は、シルハン監督の作品における登場人物たちがしばしば抱える葛藤です。彼らは、自身の伝統文化と新しい社会の価値観との間で揺れ動きながら、「アイデンティティ交渉」を余儀なくされます。この過程には、「過去の一部を捨て去る」という痛みを伴う選択と、新しい自己を「受容」するという複雑な心理が伴います。</p>
+                            </li>
+                            <li>
+                                <h4 class="font-semibold text-lg text-neutral-700">💔 愛、喪失、権力、操作</h4>
+                                <p class="quote">人間関係の複雑さは、シルハン監督の作品におけるもう一つの重要な探求領域です。登場人物たちは、愛と裏切り、信頼と疑念、そして「喪失」の経験を通じて、人間関係における「権力」のダイナミクスや、時には無意識的な「操作」の存在に直面します。これらの経験は、彼らの「精神的孤独」を深めることもあれば、予期せぬ「脆弱性」と「強さ」を露わにすることもあります。</p>
+                            </li>
+                        </ul>
+                        <p class="quote">
+                            ナグメ・シルハン監督は、これらの普遍的かつ現代的なテーマ群を通じて、移民コミュニティが異郷の地で形成するサブカルチャーが提供する、ある種の「慰め」と同時に存在する「制約」、そしてその複雑な環境の中で自己のアイデンティティを模索し、揺れ動く個人の姿を、鋭い洞察力と共感をもって繊細に描き出しています。
+                        </p>
+                    </div>
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-2xl font-semibold text-sky-700 mb-4">監督スタイルと影響</h3>
+                        <p class="quote">
+                            ナグメ・シルハン監督の映画製作におけるスタイルは、商業主義に流されることなく、自身の芸術的ビジョンを追求する強固な「インディペンデント精神」に貫かれています。彼女は、言葉による説明に頼るのではなく、映像そのものが物語を語るという「視覚的な物語表現」を極めて重視しています。登場人物の内面や感情の機微を、説明的な台詞ではなく、繊細な表情、抑制された身体の動き、あるいは象徴的な小道具や背景を通じて捉える、観察眼に優れた「ミニマリスト的な人物描写」や、感情の微妙なニュアンスを丁寧にすくい上げる繊細な演出が、彼女の作品の際立った特徴と言えるでしょう。
+                        </p>
+                        <h4 class="font-semibold text-lg text-neutral-700 mb-2">影響を受けた監督・作品：</h4>
+                        <ul class="list-disc list-inside text-neutral-600 space-y-1 text-sm">
+                            <li class="quote"><strong>日本映画の巨匠たち：</strong> 映画史に燦然と輝く黒澤明監督のダイナミックな映像世界、溝口健二監督の女性描写の深さ、木下惠介監督の叙情性、そして小津安二郎監督の静謐で普遍的な家族のドラマは、シルハン監督の美的感覚や物語構成に大きな影響を与えています。</li>
+                            <li class="quote"><strong>フランス・ヌーヴェルヴァーグの旗手たち：</strong> ジャン＝リュック・ゴダール監督の革新的な映画言語、アニエス・ヴァルダ監督のドキュメンタリーとフィクションを横断する視点、エリック・ロメール監督の人間観察眼、ジャック・リヴェット監督の実験精神、フランソワ・トリュフォー監督の自伝的要素を含む作品群は、彼女の自由な発想とインディペンデントな製作姿勢の源泉となっています。</li>
+                            <li class="quote"><strong>イタリア・ネオレアリズモの先駆者たち：</strong> ピエル・パオロ・パゾリーニ監督の詩的リアリズム、フェデリコ・フェリーニ監督の夢幻的な映像美、ミケランジェロ・アントニオーニ監督の疎外感の描写、ヴィットリオ・ロッセリーニ監督の戦後社会への眼差しは、社会性と芸術性の両立を目指す彼女の作品に影響を与えていると考えられます。</li>
+                            <li class="quote"><strong>現代ペルシャ映画の重要人物たち：</strong> アッバス・キアロスタミ監督の詩情豊かなリアリズム、彼女の師でもあるアミール・ナデリ監督の先鋭的なスタイル、そして女性監督としての先駆者であるバニ・エテマド監督の社会派作品は、イラン系である彼女のアイデンティティと映画製作における視座に深く関わっています。</li>
+                            <li class="quote"><strong>アメリカン・インディペンデントの雄：</strong> ジョン・カサヴェテス監督の即興的で生々しい人間ドラマの追求は、シルハン監督のリアリティと感情の深みを重視するスタイルに共鳴するものがあります。</li>
+                        </ul>
+                        <p class="quote mt-4">「私にとって映画とは、単なる娯楽や気晴らしではなく、まさに人生そのものなのです。それは時に強烈な体験であり、指数関数的にその輝きを増し、常に動き続け、時にはシュールな様相を呈します。映画は、観る者の認識を一変させるほどの力を秘めており、異なる文化や価値観の間に存在する隔たりを埋め、相互理解を促進するための素晴らしいツールとなり得るのです。」</small> - ナグメ・シルハン</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="director-voice" class="content-section">
+                <h2 class="text-3xl font-bold text-neutral-700 mb-8 border-b-2 border-sky-500 pb-2">監督自身の視点</h2>
+                 <p class="quote mb-8">
+                    ナグメ・シルハン監督自身の言葉は、彼女が映画製作という表現手段に対して抱く揺るぎない情熱、インディペンデント映画監督として避けられない数々の課題への真摯な取り組み、そして商業主義に迎合することなく自身の芸術的ビジョンを追求し続けるインディペンデント映画への確固たる信念を、鮮やかに映し出しています。このセクションでは、彼女の過去のインタビューや公の場での発言の中から、彼女の創造的プロセスの核心に迫る洞察や、現代の映画業界が抱える問題点に対する鋭い批評的視点に光を当てます。
+                </p>
+                <div class="three-column-grid">
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold text-sky-700 mb-2">動機と創造プロセスについて</h3>
+                        <p class="quote">「私がインディペンデント映画という道を選び、そして愛し続けている理由は、何よりもまず、物語そのものと、その物語をどのように観客に届けるかという語り方について、より多くの創造的なコントロールを映画製作者自身が持つことができるからです。これは、芸術的誠実さを保つ上で非常に重要な要素だと考えています。」</p>
+                        <p class="quote">「『MAKI マキ』という作品でニューヨークの日本人コミュニティを描いたことについて、よくその動機を尋ねられますが、私は純粋に異文化、特に日本文化の持つ深い精神性や美意識に強く惹かれています。そして、文化や背景が異なっても、結局のところ、私たちは皆、他者に理解され、尊重され、そして人生において真実の愛を見つけるという、同じ普遍的なものを探し求めているのではないでしょうか。」</p>
+                        <p class="quote">「私の創作における大きな関心事の一つは、人々が何か新しいものを掴み取り、それを決して手放すまいとするときに、必然的に過去の自分の一部を捨て去らなければならない、その痛みを伴う変容のプロセスです。アメリカに住むイラン人として、この二重性、つまり二つの文化の狭間で生きるという感覚は、私自身が痛いほどよく理解しており、それが私の物語創作の源泉の一つとなっています。」</p>
+                    </div>
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold text-sky-700 mb-2">映画業界における課題について</h3>
+                        <p class="quote">ナグメ・シルハン監督は、映画製作という分野が、歴史的にも構造的にも依然として「男性優位の業界」であるという厳しい現実を率直に認めています。そして、その中で特に「イラン系の女性であること」という自身のアイデンティティが、見えない壁やさらなる困難をもたらす可能性があるという認識を明確に持っています。これは、ジェンダーだけでなく、民族的背景や文化的マイノリティとしての立場が交差する複雑な課題を示唆しています。</p>
+                        <p class="quote">「残念ながら、映画業界においては、女性は自分自身の能力や価値を証明するために、男性よりも長く、そしてより懸命に働かなければならないという不均衡が存在します。キャリアのあらゆる段階において、女性にはより高いハードルが設定されていると感じざるを得ません。これは構造的な問題であり、改善が必要です。」</p>
+                        <p class="quote">「私が映画を通じて伝えたい物語の中には、これまで映画史の中で十分に光が当てられてこなかった、あるいは意図的に見過ごされてきた他の女性たちの物語、特に彼女たちの顔や文化的背景があまりスクリーンに登場する機会のなかった人々の物語があります。これは、過小評価されてきた声に耳を傾け、多様な視点を提示するという、私自身の使命感に基づいています。」</p>
+                        <p class="quote">シルハン監督はまた、適切な資金的・人的支援なしにインディペンデントな長編映画を製作することの極度の困難さや、インディペンデント映画製作に情熱を捧げても、必ずしも十分な金銭的報酬が得られるわけではないという厳しい現実、そしてそれが結果として多くの才能ある人々を映画界から排除してしまっている可能性についても、警鐘を鳴らしています。</p>
+                    </div>
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold text-sky-700 mb-2">今日のインディペンデント映画製作について</h3>
+                        <p class="quote">「デジタル技術の進歩は目覚ましく、現在の映画製作技術を駆使すれば、たとえ厳しい予算の制約があったとしても、最終的な作品の品質を犠牲にすることなく、多くの創造的な試みが可能です。これは、インディペンデント映画製作者にとって大きな希望と言えるでしょう。」</p>
+                        <p class="quote">「私は、いわゆる『運』というものをあまり信じていません。むしろ、『運』とは、日々の地道な努力、たゆまぬ研鑽、そして決して諦めない粘り強さの積み重ねによって、自ら引き寄せるものだと考えています。映画製作における成功は、決して誰にとっても確実なものではありませんが、真剣な情熱と探求心を持つ映画製作者であれば、必ずや自分自身の道を見つけ出し、独自の作品を世に送り出すことができると信じています。」</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="impact" class="content-section">
+                <h2 class="text-3xl font-bold text-neutral-700 mb-8 border-b-2 border-sky-500 pb-2">インディペンデント映画への意義と貢献</h2>
+                 <p class="quote mb-8">
+                    ナグメ・シルハン監督のこれまでの作品群と精力的な活動は、グローバル化が進む現代のインディペンデント映画界において、極めて重要かつ多岐にわたる意義を持っています。彼女は、自身のユニークな視点と一貫したテーマ性をもって、これまで映画史の中で十分に語られてこなかった、あるいは周縁化されてきた「過小評価されてきた物語」に光を当て、それらを普遍的な人間ドラマへと昇華させてきました。さらに、文化の境界線を大胆に越える国際共同製作を積極的に実践し、後に続く、特にマイノリティや女性の映画監督たちに対して、計り知れないインスピレーションと勇気を与え続けています。
+                </p>
+                <div class="three-column-grid">
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold text-sky-700 mb-2">🌟 過小評価されてきた物語の描写</h3>
+                        <p class="quote">シルハン監督は、その鋭い洞察力と共感的な眼差しを通じて、例えばバンクーバーに暮らすディアスポラのイラン人女性たちの複雑な内面世界（『The Neighbor (Hamsayeh)』）や、ニューヨークという大都市の移民コミュニティという文脈の中で生きる日本人女性の葛藤と成長（『MAKI マキ』）といった、これまで主流の映画では見過ごされがちだった人々の経験に、力強い声と具体的な形を与えてきました。彼女の作品は、既存のステレオタイプな表現に対して果敢に挑戦し、人間味あふれるニュアンスに富んだ人物描写を提供することで、観客に新たな視点と深い共感をもたらしています。</p>
+                    </div>
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold text-sky-700 mb-2">🌐 国境を越える映画製作</h3>
+                        <p class="quote">彼女は、アメリカとカナダの共同製作である『The Neighbor (Hamsayeh)』や、アメリカと日本の共同製作である『MAKI マキ』といった国際的なプロジェクトを成功裏に成し遂げました。これらの試みは、現代のインディペンデント映画がますますグローバル化し、多様な文化背景を持つ才能が協働する性質を鮮やかに体現しています。シルハン監督の作品は、特定の文化や国境を越えて、世界中の国際的な観客の心に深く共鳴する普遍的な物語を語ることの可能性を力強く示しています。</p>
+                    </div>
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold text-sky-700 mb-2">💡 インディペンデントな女性映画監督のモデルとして</h3>
+                        <p class="quote">ナグメ・シルハン監督の映画製作に対する揺るぎない粘り強さ、彼女が持つ明確で独自の芸術的ビジョン、そして数々の国際映画祭での受賞や上映といった批評的な成功は、映画界で自らの道を切り開こうとする多くの人々、特に構造的な困難に直面しやすい女性やマイノリティのバックグラウンドを持つ映画製作者たちにとって、大きな励みとなり、具体的な目標となるロールモデルとしての役割を果たしています。</p>
+                    </div>
+                    <div class="bg-white/75 p-6 rounded-lg shadow-md md:col-span-2 lg:col-span-3">
+                        <h3 class="text-xl font-semibold text-sky-700 mb-2">🔗 持続するビジョンと今日性</h3>
+                        <p class="quote">ナグメ・シルハン監督の映画作品は、イラン人ディアスポラやニューヨークの日本人コミュニティといった、特定の文化やコミュニティに焦点を当てながらも、その根底に流れる故郷喪失の痛み、アイデンティティの探求、愛と喪失の経験といった、人間にとって普遍的かつ根源的なテーマを探求することで、時代や文化を超えた広範な今日性を獲得しています。彼女の作品は、個人的な経験や深い文化的洞察を、誰もが共感しうる普遍的な物語へと巧みに昇華させ、それによって異なる文化間の理解と共感を深めるという、映画芸術が持つ大きな力を証明しています。彼女の映画製作への献身と独自の視点は、より多様で、より共感的で、そしてより人間的な映画世界の実現に向けて、着実に貢献していると言えるでしょう。</p>
+                        <p class="quote">（現時点で入手可能な提供された資料の中には、ナグメ・シルハン監督の具体的な次回作に関する詳細な情報は残念ながら見当たりませんでしたが、彼女がこれまでの作品で一貫して追求してきた主題的関心や、独自の映画製作アプローチを鑑みるに、今後も文化の境界を越えた人間の繋がりや、アイデンティティの探求といったテーマを、彼女ならではの深い洞察と共感をもって継続的に探求していくことが強く示唆されます。）</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="bg-neutral-800/80 backdrop-blur-md text-neutral-300 py-8 text-center mt-auto">
+            <p>© 2024 ナグメ・シルハン監督 インタラクティブ・レポート. All rights reserved.</p>
+            <p class="text-sm mt-1">このレポートは提供された情報に基づいて作成されました。</p>
+        </footer>
+    </div>
+
+    <button id="controls-toggle-button" aria-label="カスタマイズパネルを開閉">
+        <i class="fas fa-sliders-h"></i>
+    </button>
+    <div id="controls-container">
+        <h2>カスタマイズ</h2>
+        <div class="control-group">
+            <label for="backgroundColor">背景色 (BackgroundColor)</label>
+            <input type="color" id="backgroundColor" value="#001122">
+        </div>
+        <div class="control-group">
+            <label for="backgroundAlpha">背景透明度 (BackgroundAlpha): <span class="value-display" id="backgroundAlphaValue">0.1</span></label>
+            <input type="range" id="backgroundAlpha" min="0" max="1" step="0.01" value="0.1">
+        </div>
+        <div class="control-group">
+            <label for="color1">パーティクル色1 (Color1)</label>
+            <input type="color" id="color1" value="#00aaff">
+        </div>
+        <div class="control-group">
+            <label for="color2">パーティクル色2 (Color2)</label>
+            <input type="color" id="color2" value="#ff0055">
+        </div>
+        <div class="control-group">
+            <label for="colorMode">カラーモード (ColorMode)</label>
+            <select id="colorMode">
+                <option value="color1">色1のみ</option>
+                <option value="color2">色2のみ</option>
+                <option value="randomMix">ランダムミックス (色1, 色2)</option>
+                <option value="gradient">グラデーション (Y座標)</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label for="quantity">数 (Quantity): <span class="value-display" id="quantityValue">100</span></label>
+            <input type="range" id="quantity" min="10" max="500" step="10" value="100">
+        </div>
+        <div class="control-group">
+            <label for="birdSize">サイズ (BirdSize): <span class="value-display" id="birdSizeValue">4</span></label>
+            <input type="range" id="birdSize" min="1" max="20" step="0.5" value="4">
+        </div>
+        <div class="control-group">
+            <label for="wingSpan">翼幅 (WingSpan): <span class="value-display" id="wingSpanValue">4</span></label>
+            <input type="range" id="wingSpan" min="1" max="20" step="0.5" value="4">
+        </div>
+        <div class="control-group">
+            <label for="speedLimit">最大速度 (SpeedLimit): <span class="value-display" id="speedLimitValue">2</span></label>
+            <input type="range" id="speedLimit" min="0.5" max="10" step="0.1" value="2">
+        </div>
+        <div class="control-group">
+            <label for="separation">分離 (Separation): <span class="value-display" id="separationValue">25</span></label>
+            <input type="range" id="separation" min="5" max="100" step="1" value="25">
+        </div>
+        <div class="control-group">
+            <label for="alignment">整列 (Alignment): <span class="value-display" id="alignmentValue">1.0</span></label>
+            <input type="range" id="alignment" min="0.1" max="2" step="0.1" value="1.0">
+        </div>
+        <div class="control-group">
+            <label for="cohesion">結合 (Cohesion): <span class="value-display" id="cohesionValue">1.0</span></label>
+            <input type="range" id="cohesion" min="0.1" max="2" step="0.1" value="1.0">
+        </div>
+    </div>
+
+    <script>
+        // --- Vector and Boid Classes (from provided code) ---
+        class Vector {
+            constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+            add(v) { this.x += v.x; this.y += v.y; return this; }
+            sub(v) { this.x -= v.x; this.y -= v.y; return this; }
+            mult(s) { this.x *= s; this.y *= s; return this; }
+            div(s) { if (s !== 0) { this.x /= s; this.y /= s; } return this; }
+            mag() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+            normalize() { const m = this.mag(); if (m > 0) { this.div(m); } return this; }
+            limit(max) { if (this.mag() > max) { this.normalize().mult(max); } return this; }
+            static sub(v1, v2) { return new Vector(v1.x - v2.x, v1.y - v2.y); }
+            static dist(v1, v2) { const dx = v1.x - v2.x; const dy = v1.y - v2.y; return Math.sqrt(dx * dx + dy * dy); }
+        }
+
+        class Boid {
+            constructor(x, y, settings) {
+                this.settings = settings;
+                this.position = new Vector(x, y);
+                this.velocity = new Vector(Math.random() * 2 - 1, Math.random() * 2 - 1);
+                this.velocity.normalize().mult(Math.random() * (this.settings.speedLimit / 2) + (this.settings.speedLimit / 2));
+                this.acceleration = new Vector();
+                this.maxForce = 0.2;
+                this.assignColor();
+            }
+            
+            assignColor() {
+                switch (this.settings.colorMode) {
+                    case 'color1': this.color = this.settings.color1; break;
+                    case 'color2': this.color = this.settings.color2; break;
+                    case 'randomMix': this.color = Math.random() < 0.5 ? this.settings.color1 : this.settings.color2; break;
+                    case 'gradient':
+                        const ratio = this.position.y / window.innerHeight;
+                        this.color = this.interpolateColor(this.settings.color1, this.settings.color2, ratio);
+                        break;
+                    default: this.color = this.settings.color1;
+                }
+            }
+
+            interpolateColor(color1, color2, factor) {
+                const c1 = this.hexToRgb(color1); const c2 = this.hexToRgb(color2);
+                if (!c1 || !c2) return '#000000';
+                const r = Math.round(c1.r + factor * (c2.r - c1.r));
+                const g = Math.round(c1.g + factor * (c2.g - c1.g));
+                const b = Math.round(c1.b + factor * (c2.b - c1.b));
+                return `rgb(${r},${g},${b})`;
+            }
+
+            hexToRgb(hex) {
+                const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+            }
+
+            edges() {
+                if (this.position.x > window.innerWidth) this.position.x = 0;
+                else if (this.position.x < 0) this.position.x = window.innerWidth;
+                if (this.position.y > window.innerHeight) this.position.y = 0;
+                else if (this.position.y < 0) this.position.y = window.innerHeight;
+            }
+
+            applyForce(force) { this.acceleration.add(force); }
+
+            flock(boids) {
+                let separationForce = new Vector(); let alignmentForce = new Vector(); let cohesionForce = new Vector();
+                let totalSeparation = 0; let totalAlignment = 0; let totalCohesion = 0;
+                const separationRadius = this.settings.separation;
+                const perceptionRadius = 50;
+
+                for (let other of boids) {
+                    if (other === this) continue;
+                    let d = Vector.dist(this.position, other.position);
+                    if (d > 0 && d < separationRadius) {
+                        let diff = Vector.sub(this.position, other.position);
+                        diff.normalize(); diff.div(d); separationForce.add(diff); totalSeparation++;
+                    }
+                    if (d > 0 && d < perceptionRadius) {
+                        alignmentForce.add(other.velocity); totalAlignment++;
+                        cohesionForce.add(other.position); totalCohesion++;
+                    }
+                }
+
+                if (totalSeparation > 0) {
+                    separationForce.div(totalSeparation); separationForce.normalize();
+                    separationForce.mult(this.settings.speedLimit); separationForce.sub(this.velocity);
+                    separationForce.limit(this.maxForce); separationForce.mult(this.settings.separationFactor);
+                }
+                if (totalAlignment > 0) {
+                    alignmentForce.div(totalAlignment); alignmentForce.normalize();
+                    alignmentForce.mult(this.settings.speedLimit); alignmentForce.sub(this.velocity);
+                    alignmentForce.limit(this.maxForce); alignmentForce.mult(this.settings.alignmentFactor);
+                }
+                if (totalCohesion > 0) {
+                    cohesionForce.div(totalCohesion); cohesionForce.sub(this.position); cohesionForce.normalize();
+                    cohesionForce.mult(this.settings.speedLimit); cohesionForce.sub(this.velocity);
+                    cohesionForce.limit(this.maxForce); cohesionForce.mult(this.settings.cohesionFactor);
+                }
+                this.applyForce(separationForce); this.applyForce(alignmentForce); this.applyForce(cohesionForce);
+            }
+
+            update() {
+                this.velocity.add(this.acceleration);
+                this.velocity.limit(this.settings.speedLimit);
+                this.position.add(this.velocity);
+                this.acceleration.mult(0);
+                this.edges();
+                if (this.settings.colorMode === 'gradient') { this.assignColor(); }
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = this.color; ctx.strokeStyle = this.color;
+                const angle = Math.atan2(this.velocity.y, this.velocity.x);
+                ctx.save(); ctx.translate(this.position.x, this.position.y); ctx.rotate(angle);
+                ctx.beginPath();
+                ctx.moveTo(this.settings.birdSize, 0);
+                ctx.lineTo(-this.settings.birdSize / 2, -this.settings.wingSpan / 2);
+                ctx.lineTo(-this.settings.birdSize / 2, this.settings.wingSpan / 2);
+                ctx.closePath(); ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        // --- Main Animation Script ---
+        const canvas = document.getElementById('vanta-bg'); // Changed ID
+        const ctx = canvas.getContext('2d');
+        let flock = [];
+        const settings = {
+            backgroundColor: '#001122', backgroundAlpha: 0.1, color1: '#00aaff', color2: '#ff0055',
+            colorMode: 'color1', quantity: 100, birdSize: 4, wingSpan: 4, speedLimit: 2,
+            separation: 25, separationFactor: 1.5, alignmentFactor: 1.0, cohesionFactor: 1.0,
+        };
+
+        function setupControls() {
+            const controls = [
+                { id: 'backgroundColor', prop: 'backgroundColor', type: 'color' },
+                { id: 'backgroundAlpha', prop: 'backgroundAlpha', type: 'range', valueDisplay: 'backgroundAlphaValue' },
+                { id: 'color1', prop: 'color1', type: 'color' }, { id: 'color2', prop: 'color2', type: 'color' },
+                { id: 'colorMode', prop: 'colorMode', type: 'select' },
+                { id: 'quantity', prop: 'quantity', type: 'range', valueDisplay: 'quantityValue', callback: resetFlock },
+                { id: 'birdSize', prop: 'birdSize', type: 'range', valueDisplay: 'birdSizeValue' },
+                { id: 'wingSpan', prop: 'wingSpan', type: 'range', valueDisplay: 'wingSpanValue' },
+                { id: 'speedLimit', prop: 'speedLimit', type: 'range', valueDisplay: 'speedLimitValue' },
+                { id: 'separation', prop: 'separation', type: 'range', valueDisplay: 'separationValue' },
+                { id: 'alignment', prop: 'alignmentFactor', type: 'range', valueDisplay: 'alignmentValue' },
+                { id: 'cohesion', prop: 'cohesionFactor', type: 'range', valueDisplay: 'cohesionValue' }
+            ];
+            controls.forEach(control => {
+                const el = document.getElementById(control.id); if (!el) return;
+                if (control.type === 'range' || control.type === 'select' || control.type === 'color') { el.value = settings[control.prop]; }
+                if (control.valueDisplay) { const dEl = document.getElementById(control.valueDisplay); if (dEl) dEl.textContent = el.value; }
+                el.addEventListener(control.type === 'color' || control.type === 'select' ? 'change' : 'input', (e) => {
+                    settings[control.prop] = (control.type === 'range') ? parseFloat(e.target.value) : e.target.value;
+                    if (control.valueDisplay) { document.getElementById(control.valueDisplay).textContent = e.target.value; }
+                    if (control.callback) { control.callback(); }
+                    if (['color1', 'color2', 'colorMode'].includes(control.prop)) { flock.forEach(boid => boid.assignColor()); }
+                });
+            });
+        }
+        
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            if (flock.length > 0 && settings.colorMode === 'gradient') { flock.forEach(boid => boid.assignColor());}
+        }
+
+        function resetFlock() {
+            flock = [];
+            for (let i = 0; i < settings.quantity; i++) {
+                flock.push(new Boid(Math.random() * canvas.width, Math.random() * canvas.height, settings));
+            }
+        }
+
+        function animate() {
+            ctx.fillStyle = hexToRgba(settings.backgroundColor, settings.backgroundAlpha);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            flock.forEach(boid => { boid.flock(flock); boid.update(); boid.draw(ctx); });
+            requestAnimationFrame(animate);
+        }
+
+        // --- Navigation and Tab Script (from original report) ---
+        document.addEventListener('DOMContentLoaded', function () {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const contentSections = document.querySelectorAll('.content-section');
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            const filmTabButtons = document.querySelectorAll('.film-tabs .tab-button');
+            const homeContentLinks = document.querySelectorAll('.nav-trigger-card'); // Updated selector for home page links
+
+            function setActiveSection(targetId) {
+                contentSections.forEach(section => {
+                    section.classList.toggle('active', section.id === targetId);
+                });
+                navLinks.forEach(link => {
+                    link.classList.toggle('active-nav', link.getAttribute('href') === `#${targetId}`);
+                    link.classList.toggle('inactive-nav', link.getAttribute('href') !== `#${targetId}`);
+                });
+                // Do not scroll to top if target is a tab within a film card, only for main sections
+                if (document.getElementById(targetId) && document.getElementById(targetId).classList.contains('content-section')) {
+                    // Scroll main container instead of window
+                    const mainContainer = document.querySelector('.main-container');
+                    if(mainContainer) mainContainer.scrollTo(0,0); else window.scrollTo(0,0);
+                }
+            }
+           
+            function handleNavLinkClick(event) {
+                event.preventDefault();
+                const targetId = this.getAttribute('href').substring(1);
+                setActiveSection(targetId);
+                if (mobileMenu.classList.contains('block') && !mobileMenu.classList.contains('hidden')) {
+                    mobileMenu.classList.add('hidden');
+                    mobileMenu.classList.remove('block');
+                }
+            }
+
+            navLinks.forEach(link => link.addEventListener('click', handleNavLinkClick));
+           
+            homeContentLinks.forEach(link => { // For cards on home page
+                link.addEventListener('click', function(event) {
+                    event.preventDefault();
+                    const targetId = this.dataset.target;
+                    setActiveSection(targetId);
+                });
+            });
+
+            if (mobileMenuButton) {
+                mobileMenuButton.addEventListener('click', function () {
+                    mobileMenu.classList.toggle('hidden');
+                    mobileMenu.classList.toggle('block');
+                });
+            }
+
+            filmTabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetTabId = this.dataset.tab;
+                    const parentFilmCard = this.closest('.film-card');
+                    parentFilmCard.querySelectorAll('.film-tabs .tab-button').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    parentFilmCard.querySelectorAll('.tab-content').forEach(content => {
+                        content.classList.toggle('active', content.id === targetTabId);
+                    });
+                });
+            });
+            
+            // Controls Panel Toggle
+            const controlsToggleButton = document.getElementById('controls-toggle-button');
+            const controlsContainer = document.getElementById('controls-container');
+            if(controlsToggleButton && controlsContainer){
+                controlsToggleButton.addEventListener('click', () => {
+                    controlsContainer.classList.toggle('open');
+                    // Change icon based on state
+                    const icon = controlsToggleButton.querySelector('i');
+                    if (controlsContainer.classList.contains('open')) {
+                        icon.classList.remove('fa-sliders-h');
+                        icon.classList.add('fa-times');
+                    } else {
+                        icon.classList.remove('fa-times');
+                        icon.classList.add('fa-sliders-h');
+                    }
+                });
+            }
+
+
+            const initialTargetId = window.location.hash ? window.location.hash.substring(1) : 'home';
+            const sectionExists = Array.from(contentSections).some(s => s.id === initialTargetId);
+            setActiveSection(sectionExists ? initialTargetId : 'home');
+            
+            // Initialize Animation
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas(); 
+            setupControls();
+            resetFlock();   
+            animate();      
+        });
+    </script>
+</body>
+</html>
